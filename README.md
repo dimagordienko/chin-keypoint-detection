@@ -1,24 +1,41 @@
+<div align="center">
+
 # Chin Detection (YOLO Pose Fine-Tuning)
 
-This project shows the **simplest and fastest way** to fine-tune a **YOLO Pose** model for a chin detection task using keypoints.
+**Fine-tuning YOLO11 Pose to detect a single keypoint: the chin. Custom annotation in CVAT, training in a notebook, ready-to-use weights.**
+
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
+![Ultralytics](https://img.shields.io/badge/Ultralytics-YOLO11-111F68)
+![MLflow](https://img.shields.io/badge/MLflow-0194E2?logo=mlflow&logoColor=white)
+![Jupyter](https://img.shields.io/badge/Jupyter-F37626?logo=jupyter&logoColor=white)
+![CVAT](https://img.shields.io/badge/Annotation-CVAT-orange)
+
+My first ML project · February 2025
+
+</div>
 
 ---
 
-# 1. Model Preparation
+## Overview
 
-Download pretrained YOLO Pose weights:
+The goal is to teach a pretrained **YOLO11s-pose** model to find a keypoint that is not in the standard COCO skeleton: the **chin**. This is my first hands-on computer vision project: I labeled the data myself, set up the dataset, and fine-tuned the model end to end.
 
-```
-yolo11s-pose.pt
-```
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/e13e3aa4-72de-4551-bc23-eba758cbbde1" width="500" />
+  <br />
+  <sub>Model prediction on a validation image</sub>
+</div>
 
-This will be the base model for fine-tuning.
+Training logs, graphs and prediction batches are saved by Ultralytics in `runs/pose/train/`.
 
 ---
 
-# 2. Dataset Structure
+## 1. Model Preparation
 
-Recommended project structure:
+The base model is the pretrained `yolo11s-pose.pt`. Ultralytics downloads it automatically on the first run.
+
+## 2. Dataset Structure
 
 ```
 dataset/
@@ -26,55 +43,41 @@ dataset/
 ├── images/
 │   ├── train/
 │   ├── val/
-│   └── test/ 
+│   └── test/        # no labels, used only for inference
 │
 ├── labels/
 │   ├── train/
-│   ├── val/
+│   └── val/
 │
 ├── data.yaml
-├── train_model.ipynb
-└── yolo11s-pose.pt
+└── train_model.ipynb
 ```
 
----
+## 3. Data Annotation
 
-# 3. Data Annotation
-
-You can label data using CVAT or similar tools.
-
-Each line in a `.txt` file has this format:
+Data is labeled in CVAT or a similar tool. Each line in a `.txt` file has this format:
 
 ```
 class x_center y_center width height kpt_x kpt_y visibility
 ```
 
-### Example:
+Example:
 
 ```
 0 0.493021 0.371556 0.05 0.05 0.493021 0.371556 2
 ```
 
----
+| Parameter | Description |
+|---|---|
+| `class` | object class (`0` = chin) |
+| `x_center, y_center` | center of the bounding box |
+| `width, height` | size of the box |
+| `kpt_x, kpt_y` | keypoint coordinates |
+| `visibility` | `0` not labeled, `1` labeled but not visible, `2` visible |
 
-# 4. Annotation Explanation
+The chin is a single point, so the bounding box is a small fixed-size square (0.05 x 0.05) centered on the keypoint.
 
-| Parameter            | Description                 |
-| -------------------- | --------------------------- |
-| `0`                  | object class (chin)         |
-| `x_center, y_center` | center of bounding box      |
-| `w, h`               | width and height of the box |
-| `kpt_x, kpt_y`       | keypoint coordinates        |
-| `visibility`         | keypoint visibility         |
-| `0`                  | not labeled                 |
-| `1`                  | labeled but not visible     |
-| `2`                  | visible                     |
-
----
-
-# 5. `data.yaml` Configuration
-
-Example:
+## 4. `data.yaml`
 
 ```yaml
 path: dataset
@@ -87,111 +90,47 @@ names:
   0: chin
 
 kpt_shape: [1, 3]
-
 flip_idx: [0]
 ```
 
----
+- `names`: object classes (only `chin`).
+- `kpt_shape: [1, 3]`: one keypoint, each with `(x, y, visibility)`.
+- `flip_idx`: how keypoints are swapped when an image is flipped horizontally. With a single point it is `[0]`. For several points, for example nose (0), left eye (1), right eye (2), it would be `[0, 2, 1]`.
 
-### Explanation:
-
-* `names` — object classes (only `chin` in this case)
-* `kpt_shape: [1, 3]` means:
-
-  * 1 keypoint
-  * each keypoint has `(x, y, visibility)`
-* `flip_idx` — rule for flipping keypoints horizontally
-
----
-
-### Example of `flip_idx`
-
-If you had multiple keypoints:
-
-```
-nose (0)
-left_eye (1)
-right_eye (2)
-```
-
-Then:
-
-```yaml
-flip_idx: [0, 2, 1]
-```
-
----
-
-# 6. Model Training
-
-Install required libraries:
+## 5. Training
 
 ```bash
-pip install ultralytics
-pip install mlflow
+pip install ultralytics mlflow
 ```
 
-Open the notebook:
+Open `train_model.ipynb`, check that the dataset and model paths are correct, and run all cells. Training metrics are logged with MLflow.
 
-```
-train_model.ipynb
-```
+## 6. Output
 
-Make sure all dataset and model paths are correct before running.
-
----
-
-# 7. What are Epochs
-
-**Epochs** mean how many times the model goes through the whole dataset.
-
-* small dataset → more epochs
-* large dataset → fewer epochs
-
----
-
-# 8. Training Results
-
-During training, logs are saved in:
-
-```
-runs/pose/train/
-```
-
-You can find:
-
-* training graphs
-* prediction examples (batch images)
-* metrics
-
----
-
-# 9. Saved Model
-
-After training, the best model is saved here:
+After training, the best weights are saved to:
 
 ```
 runs/pose/train/weights/best.pt
 ```
 
-These are the final weights ready for production use.
+The same folder contains training graphs, validation batches and metrics.
 
----
-
-# 10. Model Usage
-
-Example of inference:
+## 7. Inference
 
 ```python
 from ultralytics import YOLO
 
 model = YOLO("runs/pose/train/weights/best.pt")
-
 results = model("image.jpg")
+
+# chin keypoint coordinates (x, y)
+print(results[0].keypoints.xy)
 ```
 
 ---
 
-# Done
+## Possible improvements
 
-Now you can use the model for chin detection in images and computer vision tasks.
+- Larger and more diverse dataset (lighting, angles, partial occlusion).
+- Real-time inference on webcam video.
+- Export to ONNX for faster deployment.
